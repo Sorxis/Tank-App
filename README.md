@@ -11,8 +11,8 @@ Mobile Web-App (PWA) fürs iPhone. Zeigt die Tankstellen im Umkreis für Super E
 - Profil: Tankmenge und Verbrauch (⚙︎)
 - Dunkelmodus automatisch, große Bedienelemente, installierbar über Safari > Teilen > „Zum Home-Bildschirm“
 
-## API-Schlüssel
-Der gemeinsame Familien-Schlüssel steht in `config.js` (`TANKERKOENIG_KEY`) und gilt für alle, die die App öffnen. Wer unter ⚙︎ einen eigenen Schlüssel einträgt, nutzt diesen stattdessen. Ohne Schlüssel liefert Tankerkönig nur Demo-Daten. Schlüssel gibt es kostenlos unter https://onboarding.tankerkoenig.de.
+## API-Schlüssel und Familiencode
+Der gemeinsame Tankerkönig-Schlüssel liegt nur als Secret `TANKERKOENIG_KEY` im Supabase-Backend, nie im Repo (das Repo und die Seite sind öffentlich). Die App fragt die Preise über die Function `tank-prices` ab. Dafür trägt jedes Familienmitglied einmal unter ⚙︎ den Familiencode ein (Secret `FAMILY_CODE`); ohne Code liefert das Backend nichts, auch der Preisalarm nicht. Wer unter ⚙︎ einen eigenen Schlüssel einträgt, fragt Tankerkönig direkt. Ohne Code und Schlüssel zeigt die App Demo-Daten.
 
 ## Nächste Etappe
 4. Preisalarm per Push und regelmäßige Preissammlung (kleines Backend, z. B. Supabase)

@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
   if (error) return new Response(error.message, { status: 500 });
   if (!alerts?.length) return Response.json({ checked: 0 });
 
-  const apiKey = alerts.map((a: any) => a.device?.api_key).find(Boolean);
+  // Gemeinsamer Schlüssel aus den Secrets, sonst ein eigener Schlüssel eines Geräts.
+  const apiKey = Deno.env.get("TANKERKOENIG_KEY") || alerts.map((a: any) => a.device?.api_key).find(Boolean);
   if (!apiKey) return Response.json({ checked: 0, note: "kein API-Schlüssel hinterlegt" });
 
   const ids = [...new Set(alerts.map((a) => a.station_id))];

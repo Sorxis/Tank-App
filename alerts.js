@@ -68,13 +68,19 @@ async function subscription() {
   });
 }
 
+// Familiencode aus den Einstellungen, das Backend verlangt ihn bei jeder Anfrage.
+function familyCode() {
+  try { return JSON.parse(localStorage.getItem('tanken.familyCode')) || ''; } catch { return ''; }
+}
+
 async function call(body) {
   const res = await fetch(`${BACKEND_URL}/functions/v1/tank-alerts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: BACKEND_KEY, Authorization: `Bearer ${BACKEND_KEY}` },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, code: familyCode() }),
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) throw new Error('Der Familiencode fehlt oder stimmt nicht. Bitte unter ⚙︎ eintragen.');
   if (!res.ok) throw new Error(data.error ? `Backend: ${data.error}` : `Backend antwortet mit Fehler ${res.status}.`);
   return data;
 }

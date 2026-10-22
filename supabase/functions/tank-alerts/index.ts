@@ -1,24 +1,16 @@
 // Schnittstelle der App zum Backend.
+// Jede Anfrage braucht den Familiencode (code).
 //   POST {action:"sync", deviceId, subscription, apiKey, alerts:[{stationId, stationName, fuel, threshold}]}
 //        speichert Push-Abo und ersetzt die Alarme/Beobachtungen des Geräts
 //   POST {action:"delete", deviceId}            löscht Gerät und Alarme
 //   POST {action:"history", stationIds:[...]}   Preisverlauf der letzten 14 Tage
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { checkCode, cors, json } from "../_shared/family.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FUELS = new Set(["e5", "e10", "diesel"]);
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -26,6 +18,8 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "json" }, 400); }
+  const denied = await checkCode(body.code);
+  if (denied) return denied;
 
   if (body.action === "history") {
     const ids = (Array.isArray(body.stationIds) ? body.stationIds : [])

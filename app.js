@@ -1,4 +1,4 @@
-import { TANKERKOENIG_KEY } from './config.js';
+import { BACKEND_URL, BACKEND_KEY } from './config.js';
 import { forecast, recordPrices, setServerHistory } from './forecast.js';
 import {
   getAlert, setAlert, removeAlert, syncIfSubscribed, fetchServerHistory, pushProblem, backendReady,
@@ -7,8 +7,10 @@ import {
 const API = 'https://creativecommons.tankerkoenig.de/json/list.php';
 const DEMO_KEY = '00000000-0000-0000-0000-000000000002';
 
-// Eigener Schlüssel aus den Einstellungen, sonst der gemeinsame aus config.js.
-const apiKey = () => state.apiKey || TANKERKOENIG_KEY;
+// Mit eigenem Schlüssel direkt zu Tankerkönig, sonst mit dem Familiencode
+// über das Backend, das den gemeinsamen Schlüssel geheim hält.
+const apiKey = () => state.apiKey;
+const realPrices = () => Boolean(state.apiKey || state.familyCode);
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -29,6 +31,7 @@ const state = {
   sort: store.get('sort', 'price'),
   onlyOpen: store.get('onlyOpen', true),
   apiKey: store.get('apiKey', ''),
+  familyCode: store.get('familyCode', ''),
   maps: store.get('maps', 'apple'),
   favorites: new Set(store.get('favorites', [])),
   view: store.get('view', 'list'),
@@ -153,7 +156,7 @@ function render() {
   const time = state.loadedAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   $('#status').textContent = `Preise von ${time} Uhr · ${stations.length} Tankstellen` +
     (diff > 0 ? ` · Ersparnis bis ${(diff * 100).toFixed(1).replace('.', ',')} ct/l` : '') +
-    (apiKey() ? '' : ' · Demo-Daten (API-Schlüssel in ⚙︎ eintragen)');
+    (realPrices() ? '' : ' · Demo-Daten (Familiencode in ⚙︎ eintragen)');
 }
 
 function stationTitle(st) {
@@ -337,6 +340,7 @@ function getPosition() {
 }
 
 async function fetchStations(pos) {
+  if (!state.apiKey && state.familyCode && BACKEND_URL) return fetchStationsBackend(pos);
   const params = new URLSearchParams({
     lat: pos.lat.toFixed(5),
     lng: pos.lng.toFixed(5),
@@ -352,6 +356,18 @@ async function fetchStations(pos) {
   return data.stations;
 }
 
+async function fetchStationsBackend(pos) {
+  const res = await fetch(`${BACKEND_URL}/functions/v1/tank-prices`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: BACKEND_KEY, Authorization: `Bearer ${BACKEND_KEY}` },
+    body: JSON.stringify({ code: state.familyCode, lat: pos.lat, lng: pos.lng, rad: Number(state.radius) }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) throw new Error('Der Familiencode stimmt nicht. Bitte unter ⚙︎ prüfen.');
+  if (!res.ok) throw new Error(data.error || `Backend antwortet mit Fehler ${res.status}.`);
+  return data.stations;
+}
+
 async function search() {
   const btn = $('#btn-locate');
   btn.disabled = true;
@@ -361,7 +377,7 @@ async function search() {
     $('#status').textContent = 'Preise werden geladen …';
     state.stations = await fetchStations(state.position);
     state.loadedAt = new Date();
-    if (apiKey()) recordPrices(state.stations, state.favorites);
+    if (realPrices()) recordPrices(state.stations, state.favorites);
     render();
     loadServerHistory();
   } catch (err) {
@@ -408,6 +424,7 @@ document.querySelectorAll('.view button').forEach((b) =>
 const dialog = $('#settings');
 $('#btn-settings').addEventListener('click', () => {
   $('#apikey').value = state.apiKey;
+  $('#family-code').value = state.familyCode;
   $('#maps').value = state.maps;
   $('#liters').value = state.liters;
   $('#consumption').value = state.consumption;
@@ -417,7 +434,9 @@ dialog.addEventListener('close', () => {
   if (dialog.returnValue !== 'save') return;
   state.apiKey = $('#apikey').value.trim();
   state.maps = $('#maps').value;
+  state.familyCode = $('#family-code').value.trim();
   store.set('apiKey', state.apiKey);
+  store.set('familyCode', state.familyCode);
   store.set('maps', state.maps);
   const liters = parseFloat($('#liters').value.replace(',', '.'));
   const consumption = parseFloat($('#consumption').value.replace(',', '.'));
