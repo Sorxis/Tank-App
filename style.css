@@ -255,10 +255,9 @@ dialog h2 { margin-top: 0; font: 800 24px/1.2 var(--round); letter-spacing: -.01
 dialog label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-size: 14px; font-weight: 600; color: var(--muted); }
 dialog .hint { font-size: 13px; color: var(--muted); margin-top: -4px; }
 dialog .hint.warn { color: var(--pricey); }
-dialog fieldset { border: 0; background: var(--card-2); border-radius: 18px; padding: 12px 14px 2px; margin: 0 0 14px; }
-dialog fieldset input { background: var(--card); }
-dialog fieldset label { clear: both; }
-dialog legend { font-weight: 800; color: var(--text); padding: 0; float: left; width: 100%; margin-bottom: 8px; }
+dialog .group { background: var(--card-2); border-radius: 18px; padding: 14px 14px 2px; margin: 0 0 14px; }
+dialog .group input { background: var(--card); }
+dialog .group h3 { font-size: 17px; font-weight: 800; color: var(--text); margin: 0 0 10px; }
 dialog .row { display: flex; gap: 10px; margin-top: 4px; }
 dialog .row button { flex: 1; min-height: 52px; border-radius: 16px; border: 0; background: var(--card-2); color: var(--text); font-size: 17px; font-weight: 700; }
 dialog .row button.primary { background: var(--accent); color: var(--accent-text); }
