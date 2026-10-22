@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Tanken</title>
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#f2f5f9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#070b14" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tanken">
@@ -15,21 +16,34 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top">
-    <h1>Tanken</h1>
-    <button id="btn-settings" class="icon-btn" aria-label="Einstellungen">⚙︎</button>
-  </header>
+  <div class="hero">
+    <header class="top">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M3 21h13"/><path d="M4 10h11"/><path d="M15 8h1.5a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V9l-3-3"/></svg>
+        </span>
+        <h1>Tanken</h1>
+      </div>
+      <button id="btn-settings" class="icon-btn" aria-label="Einstellungen">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </header>
+    <p class="tagline">Günstig tanken in deiner Nähe</p>
 
-  <nav class="fuel" role="tablist" aria-label="Kraftstoff">
-    <button data-fuel="e5" role="tab">Super E5</button>
-    <button data-fuel="e10" role="tab">E10</button>
-    <button data-fuel="diesel" role="tab">Diesel</button>
-  </nav>
+    <nav class="fuel" role="tablist" aria-label="Kraftstoff">
+      <button data-fuel="e5" role="tab">Super E5</button>
+      <button data-fuel="e10" role="tab">E10</button>
+      <button data-fuel="diesel" role="tab">Diesel</button>
+    </nav>
 
-  <section id="forecast" class="forecast" aria-label="Prognose"></section>
+    <button id="btn-locate" class="primary locate">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+      Tankstellen in der Nähe suchen
+    </button>
+  </div>
 
   <section class="controls">
-    <label>Umkreis
+    <label class="chip">Umkreis
       <select id="radius">
         <option value="2">2 km</option>
         <option value="5">5 km</option>
@@ -38,17 +52,17 @@
         <option value="25">25 km</option>
       </select>
     </label>
-    <label>Sortierung
+    <label class="chip">Sortierung
       <select id="sort">
         <option value="price">Preis</option>
         <option value="dist">Entfernung</option>
         <option value="net">Ersparnis inkl. Umweg</option>
       </select>
     </label>
-    <label class="check"><input type="checkbox" id="only-open" checked> nur geöffnet</label>
+    <label class="check"><input type="checkbox" id="only-open" checked role="switch"> nur geöffnet</label>
   </section>
 
-  <button id="btn-locate" class="primary">📍 Tankstellen in der Nähe suchen</button>
+  <section id="forecast" class="forecast" aria-label="Prognose"></section>
 
   <p id="status" class="status" role="status"></p>
 
@@ -63,10 +77,10 @@
   <dialog id="settings">
     <form method="dialog">
       <h2>Einstellungen</h2>
-      <label>Tankerkönig API-Schlüssel
+      <label>Eigener Tankerkönig-Schlüssel (optional)
         <input id="apikey" type="text" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
       </label>
-      <p class="hint">Kostenlos beantragen unter <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a>. Ohne Schlüssel zeigt die App Demo-Daten.</p>
+      <p class="hint">Normalerweise leer lassen, die App nutzt dann den gemeinsamen Familien-Schlüssel. Eigenen Schlüssel gibt es kostenlos unter <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a>.</p>
       <fieldset>
         <legend>Mein Auto</legend>
         <label>Tankmenge pro Tankvorgang (Liter)

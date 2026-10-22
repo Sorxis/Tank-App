@@ -1,3 +1,4 @@
+import { TANKERKOENIG_KEY } from './config.js';
 import { forecast, recordPrices, setServerHistory } from './forecast.js';
 import {
   getAlert, setAlert, removeAlert, syncIfSubscribed, fetchServerHistory, pushProblem, backendReady,
@@ -5,6 +6,9 @@ import {
 
 const API = 'https://creativecommons.tankerkoenig.de/json/list.php';
 const DEMO_KEY = '00000000-0000-0000-0000-000000000002';
+
+// Eigener Schlüssel aus den Einstellungen, sonst der gemeinsame aus config.js.
+const apiKey = () => state.apiKey || TANKERKOENIG_KEY;
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -147,7 +151,7 @@ function render() {
   const diff = max - min;
   $('#status').textContent = `${stations.length} Tankstellen` +
     (diff > 0 ? ` · Ersparnis bis ${(diff * 100).toFixed(1).replace('.', ',')} ct/l` : '') +
-    (state.apiKey ? '' : ' · Demo-Daten (API-Schlüssel in ⚙︎ eintragen)');
+    (apiKey() ? '' : ' · Demo-Daten (API-Schlüssel in ⚙︎ eintragen)');
 }
 
 function stationTitle(st) {
@@ -255,7 +259,7 @@ function toggleFavorite(id) {
 
 function alertContext() {
   return {
-    apiKey: state.apiKey,
+    apiKey: apiKey(),
     favorites: state.favorites,
     fuel: state.fuel,
     stationNames: new Map(state.stations.map((st) => [st.id, stationTitle(st)])),
@@ -337,7 +341,7 @@ async function fetchStations(pos) {
     rad: state.radius,
     sort: 'dist',
     type: 'all', // alle Sorten auf einmal, damit der Sortenwechsel ohne neue Abfrage geht
-    apikey: state.apiKey || DEMO_KEY,
+    apikey: apiKey() || DEMO_KEY,
   });
   const res = await fetch(`${API}?${params}`);
   if (!res.ok) throw new Error(`Tankerkönig antwortet mit Fehler ${res.status}.`);
@@ -354,7 +358,7 @@ async function search() {
     state.position = await getPosition();
     $('#status').textContent = 'Preise werden geladen …';
     state.stations = await fetchStations(state.position);
-    if (state.apiKey) recordPrices(state.stations, state.favorites);
+    if (apiKey()) recordPrices(state.stations, state.favorites);
     render();
     loadServerHistory();
   } catch (err) {

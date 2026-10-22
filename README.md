@@ -12,7 +12,7 @@ Mobile Web-App (PWA) fürs iPhone. Zeigt die Tankstellen im Umkreis für Super E
 - Dunkelmodus automatisch, große Bedienelemente, installierbar über Safari > Teilen > „Zum Home-Bildschirm“
 
 ## API-Schlüssel
-Kostenlos unter https://onboarding.tankerkoenig.de beantragen und in der App unter ⚙︎ eintragen. Ohne Schlüssel liefert Tankerkönig nur Demo-Daten.
+Der gemeinsame Familien-Schlüssel steht in `config.js` (`TANKERKOENIG_KEY`) und gilt für alle, die die App öffnen. Wer unter ⚙︎ einen eigenen Schlüssel einträgt, nutzt diesen stattdessen. Ohne Schlüssel liefert Tankerkönig nur Demo-Daten. Schlüssel gibt es kostenlos unter https://onboarding.tankerkoenig.de.
 
 ## Nächste Etappe
 4. Preisalarm per Push und regelmäßige Preissammlung (kleines Backend, z. B. Supabase)
