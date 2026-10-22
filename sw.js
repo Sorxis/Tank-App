@@ -1,6 +1,6 @@
 // Speichert die App-Dateien für schnellen Start. Preise kommen immer frisch aus dem Netz.
-const CACHE = 'tanken-v3';
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'forecast.js', 'manifest.json', 'icons/icon.svg', 'icons/icon-180.png', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css'];
+const CACHE = 'tanken-v4';
+const FILES = ['./', 'index.html', 'style.css', 'app.js', 'forecast.js', 'alerts.js', 'config.js', 'manifest.json', 'icons/icon.svg', 'icons/icon-180.png', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)));
@@ -22,4 +22,24 @@ self.addEventListener('fetch', (e) => {
       .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return res; })
       .catch(() => caches.match(e.request)),
   );
+});
+
+// Preisalarm vom Backend
+self.addEventListener('push', (e) => {
+  let data = {};
+  try { data = e.data.json(); } catch { data = { title: 'Tanken', body: e.data?.text() ?? '' }; }
+  e.waitUntil(self.registration.showNotification(data.title || 'Tanken', {
+    body: data.body,
+    tag: data.tag,
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window' }).then((list) => {
+    for (const c of list) if ('focus' in c) return c.focus();
+    return self.clients.openWindow('./');
+  }));
 });

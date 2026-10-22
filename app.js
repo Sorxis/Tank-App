@@ -1,4 +1,7 @@
-import { forecast, recordPrices } from './forecast.js';
+import { forecast, recordPrices, setServerHistory } from './forecast.js';
+import {
+  getAlert, setAlert, removeAlert, syncIfSubscribed, fetchServerHistory, pushProblem, backendReady,
+} from './alerts.js';
 
 const API = 'https://creativecommons.tankerkoenig.de/json/list.php';
 const DEMO_KEY = '00000000-0000-0000-0000-000000000002';
@@ -173,11 +176,13 @@ function renderList(stations, min, max) {
       <div class="actions">
         <a href="${navUrl(st)}" target="_blank" rel="noopener">Navigation</a>
         <button class="fav" aria-pressed="${isFav}">${isFav ? '★ Favorit' : '☆ Merken'}</button>
+        ${backendReady ? `<button class="bell" aria-label="Preisalarm" aria-pressed="${Boolean(getAlert(st.id, state.fuel))}">🔔</button>` : ''}
       </div>`;
     // Namen/Adressen kommen aus der API, daher als Text einsetzen.
     li.querySelector('.name').textContent = stationTitle(st);
     li.querySelector('.addr').textContent = stationAddress(st);
     li.querySelector('.fav').addEventListener('click', () => toggleFavorite(st.id));
+    li.querySelector('.bell')?.addEventListener('click', () => openAlertDialog(st));
     list.append(li);
   }
 }
@@ -243,7 +248,72 @@ function toggleFavorite(id) {
   else state.favorites.add(id);
   store.set('favorites', [...state.favorites]);
   render();
+  syncIfSubscribed(alertContext()).catch(() => {});
 }
+
+// ---------- Preisalarm ----------
+
+function alertContext() {
+  return {
+    apiKey: state.apiKey,
+    favorites: state.favorites,
+    fuel: state.fuel,
+    stationNames: new Map(state.stations.map((st) => [st.id, stationTitle(st)])),
+  };
+}
+
+const FUEL_LABEL = { e5: 'Super E5', e10: 'E10', diesel: 'Diesel' };
+let alertStation = null;
+
+function openAlertDialog(st) {
+  alertStation = st;
+  const existing = getAlert(st.id, state.fuel);
+  $('#alert-station').textContent =
+    `${stationTitle(st)}, ${FUEL_LABEL[state.fuel]}. Aktuell ${st[state.fuel].toFixed(3).replace('.', ',')} €.`;
+  const preset = existing ? existing.threshold : Math.round((st[state.fuel] - 0.03) * 100) / 100;
+  $('#alert-threshold').value = preset.toFixed(2);
+  $('#alert-delete').hidden = !existing;
+  const problem = pushProblem();
+  $('#alert-problem').hidden = !problem;
+  $('#alert-problem').textContent = problem ?? '';
+  $('#alert-save').disabled = Boolean(problem);
+  $('#alert-error').hidden = true;
+  $('#alert-dialog').showModal();
+}
+
+// Speichern läuft im Klick selbst, weil iOS die Mitteilungs-Erlaubnis nur
+// direkt nach einem Tipp abfragt.
+$('#alert-save').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const threshold = parseFloat($('#alert-threshold').value.replace(',', '.'));
+  if (!(threshold > 0.5 && threshold < 5)) {
+    $('#alert-error').textContent = 'Bitte einen Preis in Euro eingeben, z. B. 1,69.';
+    $('#alert-error').hidden = false;
+    return;
+  }
+  const st = alertStation;
+  $('#alert-save').disabled = true;
+  try {
+    await setAlert({ stationId: st.id, stationName: stationTitle(st), fuel: state.fuel, threshold }, alertContext());
+    $('#alert-dialog').close();
+    $('#status').textContent = `Preisalarm gespeichert: ${stationTitle(st)} ab ${threshold.toFixed(2).replace('.', ',')} €.`;
+    render();
+  } catch (err) {
+    $('#alert-error').textContent = err.message;
+    $('#alert-error').hidden = false;
+  } finally {
+    $('#alert-save').disabled = false;
+  }
+});
+
+$('#alert-delete').addEventListener('click', async (e) => {
+  e.preventDefault();
+  try {
+    await removeAlert(alertStation.id, state.fuel, alertContext());
+  } catch {}
+  $('#alert-dialog').close();
+  render();
+});
 
 // ---------- Daten ----------
 
@@ -286,11 +356,24 @@ async function search() {
     state.stations = await fetchStations(state.position);
     if (state.apiKey) recordPrices(state.stations, state.favorites);
     render();
+    loadServerHistory();
   } catch (err) {
     $('#status').textContent = err.message;
   } finally {
     btn.disabled = false;
   }
+}
+
+// Verlauf vom Backend holen (Favoriten und nächste Tankstellen) und die
+// Prognose damit neu berechnen.
+async function loadServerHistory() {
+  if (!backendReady) return;
+  const nearest = [...state.stations].sort((a, b) => a.dist - b.dist).slice(0, 10).map((st) => st.id);
+  const ids = [...new Set([...state.favorites, ...nearest])];
+  try {
+    setServerHistory(await fetchServerHistory(ids));
+    renderForecast();
+  } catch {}
 }
 
 // ---------- Bedienelemente ----------

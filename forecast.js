@@ -14,6 +14,16 @@ const HISTORY_MAX = 3000;
 const MIN_SAMPLES_PER_HOUR = 3;
 const MIN_HOURS_COVERED = 14;
 
+// Preisverlauf vom Backend (alle 10 Minuten gesammelt), nur im Speicher.
+let serverHistory = [];
+
+export function setServerHistory(rows) {
+  const num = (v) => (v === null || v === undefined ? null : Number(v));
+  serverHistory = rows.map((r) => ({
+    t: new Date(r.ts).getTime(), id: r.station_id, e5: num(r.e5), e10: num(r.e10), diesel: num(r.diesel),
+  }));
+}
+
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; }
 }
@@ -42,7 +52,7 @@ export function recordPrices(stations, favorites) {
 // Eigene Kurve: Abweichung jedes Preises vom Tagestiefstwert derselben
 // Tankstelle, gemittelt pro Stunde.
 function learnedCurve(fuel) {
-  const history = loadHistory().filter((h) => typeof h[fuel] === 'number');
+  const history = [...loadHistory(), ...serverHistory].filter((h) => typeof h[fuel] === 'number');
   const dayMin = new Map();
   for (const h of history) {
     const key = h.id + new Date(h.t).toDateString();
@@ -57,10 +67,10 @@ function learnedCurve(fuel) {
     count[d.getHours()] += 1;
   }
   const covered = count.filter((c) => c >= MIN_SAMPLES_PER_HOUR).length;
-  if (covered < MIN_HOURS_COVERED) return { curve: null, covered };
+  if (covered < MIN_HOURS_COVERED) return { curve: null, covered, samples: history.length };
   // Lücken mit dem typischen Verlauf füllen.
   const curve = sum.map((s, i) => (count[i] >= MIN_SAMPLES_PER_HOUR ? s / count[i] : TYPICAL[i]));
-  return { curve, covered };
+  return { curve, covered, samples: history.length };
 }
 
 export function forecast(fuel, now = new Date()) {
@@ -76,6 +86,7 @@ export function forecast(fuel, now = new Date()) {
   }
   return {
     curve,
+    samples: learned.samples,
     hour,
     best,
     savingCt: Math.max(0, curve[hour] - curve[best]),

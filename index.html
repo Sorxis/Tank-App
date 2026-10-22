@@ -89,6 +89,23 @@
     </form>
   </dialog>
 
+  <dialog id="alert-dialog">
+    <form method="dialog">
+      <h2>Preisalarm</h2>
+      <p id="alert-station" class="hint"></p>
+      <label>Benachrichtigen, wenn der Preis gleich oder unter
+        <input id="alert-threshold" type="number" inputmode="decimal" min="0.5" max="5" step="0.01">
+      </label>
+      <p id="alert-problem" class="hint warn" hidden></p>
+      <p id="alert-error" class="hint warn" hidden></p>
+      <div class="row">
+        <button value="cancel">Abbrechen</button>
+        <button value="delete" id="alert-delete">Löschen</button>
+        <button value="save" class="primary" id="alert-save">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="vendor/leaflet/leaflet.js"></script>
   <script src="app.js" type="module"></script>
 </body>

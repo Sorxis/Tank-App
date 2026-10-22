@@ -128,3 +128,7 @@ dialog legend { font-weight: 700; color: var(--text); padding: 0 4px; }
 .net { font-weight: 700; }
 .net.plus { color: var(--cheap); }
 .net.minus { color: var(--pricey); }
+
+dialog .hint.warn { color: var(--pricey); }
+.station .actions .bell { flex: 0 0 52px; }
+.station .actions .bell[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
