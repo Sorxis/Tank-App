@@ -12,11 +12,13 @@
   --accent-text: #ffffff;
   --cheap: #059669;
   --cheap-soft: rgb(5 150 105 / .12);
+  --on-cheap: #ffffff;
   --pricey: #dc2626;
   --pricey-soft: rgb(220 38 38 / .1);
   --star: #f59e0b;
   --shadow: 0 1px 2px rgb(15 23 42 / .04), 0 8px 24px rgb(15 23 42 / .06);
   --hero: linear-gradient(135deg, #0f766e 0%, #0e7490 60%, #1e40af 130%);
+  --seg-on: #ffffff;
   --radius: 22px;
   --round: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, sans-serif;
 }
@@ -35,10 +37,12 @@
     --accent-text: #042f2e;
     --cheap: #34d399;
     --cheap-soft: rgb(52 211 153 / .14);
+    --on-cheap: #022c22;
     --pricey: #f87171;
     --pricey-soft: rgb(248 113 113 / .12);
     --shadow: 0 1px 0 rgb(255 255 255 / .03) inset, 0 10px 30px rgb(0 0 0 / .35);
     --hero: linear-gradient(135deg, #0f766e 0%, #155e75 55%, #1e3a8a 120%);
+    --seg-on: #2b374d;
   }
 }
 
@@ -174,7 +178,7 @@ select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1p
   background: var(--card-2); border-radius: 16px;
 }
 .view button { min-height: 46px; border-radius: 12px; border: 0; background: transparent; color: var(--muted); font-size: 16px; font-weight: 700; }
-.view button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 2px 8px rgb(0 0 0 / .12); }
+.view button[aria-selected="true"] { background: var(--seg-on); color: var(--text); box-shadow: 0 2px 8px rgb(0 0 0 / .12); }
 .view[hidden] { display: none; }
 
 .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
@@ -232,7 +236,7 @@ select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1p
   padding: 6px 8px; white-space: nowrap; box-shadow: 0 4px 12px rgb(0 0 0 / .3); text-align: center;
   transform: translate(-50%, -100%); width: max-content;
 }
-.pin.cheapest { border-color: var(--cheap); color: #fff; background: var(--cheap); }
+.pin.cheapest { border-color: var(--cheap); color: var(--on-cheap); background: var(--cheap); }
 .pin.priciest { border-color: var(--pricey); color: var(--pricey); }
 .pin.fav::before { content: "★ "; color: var(--star); }
 .me-dot { width: 18px; height: 18px; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 6px rgb(37 99 235 / .25); }
@@ -253,7 +257,10 @@ dialog .hint { font-size: 13px; color: var(--muted); margin-top: -4px; }
 dialog .hint.warn { color: var(--pricey); }
 dialog fieldset { border: 0; background: var(--card-2); border-radius: 18px; padding: 12px 14px 2px; margin: 0 0 14px; }
 dialog fieldset input { background: var(--card); }
+dialog fieldset label { clear: both; }
 dialog legend { font-weight: 800; color: var(--text); padding: 0; float: left; width: 100%; margin-bottom: 8px; }
 dialog .row { display: flex; gap: 10px; margin-top: 4px; }
 dialog .row button { flex: 1; min-height: 52px; border-radius: 16px; border: 0; background: var(--card-2); color: var(--text); font-size: 17px; font-weight: 700; }
 dialog .row button.primary { background: var(--accent); color: var(--accent-text); }
+dialog h2:focus { outline: none; }
+dialog .version { font-size: 12px; color: var(--muted); text-align: center; margin: 14px 0 0; }
