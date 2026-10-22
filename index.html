@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tanken</title>
+  <meta name="theme-color" content="#0f766e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tanken">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Tanken</h1>
+    <button id="btn-settings" class="icon-btn" aria-label="Einstellungen">⚙︎</button>
+  </header>
+
+  <nav class="fuel" role="tablist" aria-label="Kraftstoff">
+    <button data-fuel="e5" role="tab">Super E5</button>
+    <button data-fuel="e10" role="tab">E10</button>
+    <button data-fuel="diesel" role="tab">Diesel</button>
+  </nav>
+
+  <section class="controls">
+    <label>Umkreis
+      <select id="radius">
+        <option value="2">2 km</option>
+        <option value="5">5 km</option>
+        <option value="10">10 km</option>
+        <option value="15">15 km</option>
+        <option value="25">25 km</option>
+      </select>
+    </label>
+    <label>Sortierung
+      <select id="sort">
+        <option value="price">Preis</option>
+        <option value="dist">Entfernung</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" id="only-open" checked> nur geöffnet</label>
+  </section>
+
+  <button id="btn-locate" class="primary">📍 Tankstellen in der Nähe suchen</button>
+
+  <p id="status" class="status" role="status"></p>
+
+  <nav class="view" aria-label="Ansicht">
+    <button data-view="list">Liste</button>
+    <button data-view="map">Karte</button>
+  </nav>
+  <ul id="list" class="list"></ul>
+  <div id="map" class="map" hidden></div>
+  <p class="foot">Preise: <a href="https://creativecommons.tankerkoenig.de" target="_blank" rel="noopener">Tankerkönig</a> / MTS-K, Lizenz CC BY 4.0</p>
+
+  <dialog id="settings">
+    <form method="dialog">
+      <h2>Einstellungen</h2>
+      <label>Tankerkönig API-Schlüssel
+        <input id="apikey" type="text" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      </label>
+      <p class="hint">Kostenlos beantragen unter <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a>. Ohne Schlüssel zeigt die App Demo-Daten.</p>
+      <label>Kartendienst für Navigation
+        <select id="maps">
+          <option value="apple">Apple Karten</option>
+          <option value="google">Google Maps</option>
+        </select>
+      </label>
+      <div class="row">
+        <button value="cancel">Abbrechen</button>
+        <button value="save" class="primary">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
