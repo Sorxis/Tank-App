@@ -35,6 +35,7 @@ const state = {
   liters: store.get('liters', 40),
   consumption: store.get('consumption', 7),
   stations: [],
+  loadedAt: null,
   position: null,
 };
 
@@ -149,7 +150,8 @@ function render() {
   else renderList(stations, min, max);
 
   const diff = max - min;
-  $('#status').textContent = `${stations.length} Tankstellen` +
+  const time = state.loadedAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  $('#status').textContent = `Preise von ${time} Uhr · ${stations.length} Tankstellen` +
     (diff > 0 ? ` · Ersparnis bis ${(diff * 100).toFixed(1).replace('.', ',')} ct/l` : '') +
     (apiKey() ? '' : ' · Demo-Daten (API-Schlüssel in ⚙︎ eintragen)');
 }
@@ -358,6 +360,7 @@ async function search() {
     state.position = await getPosition();
     $('#status').textContent = 'Preise werden geladen …';
     state.stations = await fetchStations(state.position);
+    state.loadedAt = new Date();
     if (apiKey()) recordPrices(state.stations, state.favorites);
     render();
     loadServerHistory();

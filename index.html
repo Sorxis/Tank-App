@@ -76,11 +76,7 @@
 
   <dialog id="settings">
     <form method="dialog">
-      <h2>Einstellungen</h2>
-      <label>Eigener Tankerkönig-Schlüssel (optional)
-        <input id="apikey" type="text" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-      </label>
-      <p class="hint">Normalerweise leer lassen, die App nutzt dann den gemeinsamen Familien-Schlüssel. Eigenen Schlüssel gibt es kostenlos unter <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a>.</p>
+      <h2 tabindex="-1" autofocus>Einstellungen</h2>
       <fieldset>
         <legend>Mein Auto</legend>
         <label>Tankmenge pro Tankvorgang (Liter)
@@ -96,16 +92,21 @@
           <option value="google">Google Maps</option>
         </select>
       </label>
+      <label>Eigener Tankerkönig-Schlüssel (optional)
+        <input id="apikey" type="text" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      </label>
+      <p class="hint">Normalerweise leer lassen, die App nutzt dann den gemeinsamen Familien-Schlüssel. Eigenen Schlüssel gibt es kostenlos unter <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a>.</p>
       <div class="row">
         <button value="cancel">Abbrechen</button>
         <button value="save" class="primary">Speichern</button>
       </div>
+      <p class="version">App-Version vom 22.10.2026</p>
     </form>
   </dialog>
 
   <dialog id="alert-dialog">
     <form method="dialog">
-      <h2>Preisalarm</h2>
+      <h2 tabindex="-1" autofocus>Preisalarm</h2>
       <p id="alert-station" class="hint"></p>
       <label>Benachrichtigen, wenn der Preis gleich oder unter
         <input id="alert-threshold" type="number" inputmode="decimal" min="0.5" max="5" step="0.01">
