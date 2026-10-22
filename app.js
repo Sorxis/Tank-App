@@ -1,3 +1,5 @@
+import { forecast, recordPrices } from './forecast.js';
+
 const API = 'https://creativecommons.tankerkoenig.de/json/list.php';
 const DEMO_KEY = '00000000-0000-0000-0000-000000000002';
 
@@ -23,6 +25,8 @@ const state = {
   maps: store.get('maps', 'apple'),
   favorites: new Set(store.get('favorites', [])),
   view: store.get('view', 'list'),
+  liters: store.get('liters', 40),
+  consumption: store.get('consumption', 7),
   stations: [],
   position: null,
 };
@@ -42,15 +46,67 @@ function navUrl(st) {
     : `https://maps.apple.com/?daddr=${dest}&dirflg=d`;
 }
 
+const euro = (v) => v.toFixed(2).replace('.', ',') + ' €';
+const ROAD_FACTOR = 1.3; // Straße ist im Schnitt etwa 30 % länger als Luftlinie
+
+// Umweg-Rechner: Ersparnis gegenüber der nächstgelegenen Tankstelle,
+// abzüglich Spritkosten für den Mehrweg hin und zurück.
+function addNetSavings(list) {
+  const ref = list.reduce((a, b) => (b.dist < a.dist ? b : a), list[0]);
+  for (const st of list) {
+    const extraKm = Math.max(0, st.dist - ref.dist) * 2 * ROAD_FACTOR;
+    const detourCost = extraKm * state.consumption / 100 * st[state.fuel];
+    st.net = (ref[state.fuel] - st[state.fuel]) * state.liters - detourCost;
+    st.isRef = st === ref;
+  }
+}
+
 function visibleStations() {
   const list = state.stations
     .filter((st) => typeof st[state.fuel] === 'number' && st[state.fuel] > 0)
     .filter((st) => !state.onlyOpen || st.isOpen);
+  if (list.length) addNetSavings(list);
   list.sort((a, b) => {
     if (state.sort === 'dist') return a.dist - b.dist;
+    if (state.sort === 'net') return b.net - a.net || a.dist - b.dist;
     return a[state.fuel] - b[state.fuel] || a.dist - b.dist;
   });
   return list;
+}
+
+function netLabel(st) {
+  if (st.isRef) return '<span class="net">nächste Tankstelle</span>';
+  if (Math.abs(st.net) < 0.05) return '<span class="net">lohnt sich kaum</span>';
+  return st.net > 0
+    ? `<span class="net plus">spart ${euro(st.net)}</span>`
+    : `<span class="net minus">${euro(-st.net)} teurer</span>`;
+}
+
+function renderForecast() {
+  const f = forecast(state.fuel);
+  const max = Math.max(...f.curve, 1);
+  const bars = f.curve.map((v, h) => {
+    const cls = h === f.hour ? 'now' : (v <= Math.min(...f.curve) + 1 ? 'cheap' : '');
+    return `<span class="${cls}" style="height:${Math.round(8 + (v / max) * 92)}%" title="${h} Uhr"></span>`;
+  }).join('');
+
+  let tip;
+  let sub;
+  if (f.savingCt < 1) {
+    tip = '<p class="tip good">Jetzt ist ein guter Zeitpunkt zum Tanken.</p>';
+    sub = 'In den nächsten Stunden wird es voraussichtlich nicht günstiger.';
+  } else {
+    const ct = Math.round(f.savingCt);
+    tip = `<p class="tip">Günstiger ab etwa ${f.best} Uhr</p>`;
+    sub = `Voraussichtlich rund ${ct} ct/l weniger, bei ${state.liters} l also etwa ${euro(ct / 100 * state.liters)}.`;
+  }
+  const src = f.source === 'eigen'
+    ? 'Prognose aus deinen gespeicherten Preisen in der Umgebung.'
+    : `Typischer Tagesverlauf in Deutschland (ADAC/Bundeskartellamt). Lernt mit jeder Suche dazu (${f.covered}/14 Stunden erfasst).`;
+  $('#forecast').innerHTML = `${tip}<p class="sub">${sub}</p>
+    <div class="bars" aria-hidden="true">${bars}</div>
+    <div class="bar-axis"><span>0 Uhr</span><span>6</span><span>12</span><span>18</span></div>
+    <p class="src">${src}</p>`;
 }
 
 function priceClass(price, min, max) {
@@ -59,6 +115,7 @@ function priceClass(price, min, max) {
 }
 
 function render() {
+  renderForecast();
   document.querySelectorAll('.fuel button').forEach((b) =>
     b.setAttribute('aria-selected', String(b.dataset.fuel === state.fuel)));
   document.querySelectorAll('.view button').forEach((b) =>
@@ -112,7 +169,7 @@ function renderList(stations, min, max) {
       <div class="name"></div>
       <div class="price ${priceClass(price, min, max)}">${formatPrice(price)}</div>
       <div class="addr"></div>
-      <div class="meta">${st.dist.toFixed(1).replace('.', ',')} km${st.isOpen ? '' : '<span class="badge">geschlossen</span>'}${price === min ? '<span class="badge">günstigste</span>' : ''}</div>
+      <div class="meta">${st.dist.toFixed(1).replace('.', ',')} km · ${netLabel(st)}${st.isOpen ? '' : '<span class="badge">geschlossen</span>'}${price === min ? '<span class="badge">günstigste</span>' : ''}</div>
       <div class="actions">
         <a href="${navUrl(st)}" target="_blank" rel="noopener">Navigation</a>
         <button class="fav" aria-pressed="${isFav}">${isFav ? '★ Favorit' : '☆ Merken'}</button>
@@ -166,7 +223,7 @@ function renderMap(stations, min, max) {
     const addr = document.createElement('div');
     addr.textContent = stationAddress(st);
     const info = document.createElement('div');
-    info.innerHTML = `${formatPrice(price)} € · ${st.dist.toFixed(1).replace('.', ',')} km`;
+    info.innerHTML = `${formatPrice(price)} € · ${st.dist.toFixed(1).replace('.', ',')} km<br>${netLabel(st)}`;
     const nav = document.createElement('a');
     nav.className = 'nav';
     nav.href = navUrl(st);
@@ -227,6 +284,7 @@ async function search() {
     state.position = await getPosition();
     $('#status').textContent = 'Preise werden geladen …';
     state.stations = await fetchStations(state.position);
+    if (state.apiKey) recordPrices(state.stations, state.favorites);
     render();
   } catch (err) {
     $('#status').textContent = err.message;
@@ -261,6 +319,8 @@ const dialog = $('#settings');
 $('#btn-settings').addEventListener('click', () => {
   $('#apikey').value = state.apiKey;
   $('#maps').value = state.maps;
+  $('#liters').value = state.liters;
+  $('#consumption').value = state.consumption;
   dialog.showModal();
 });
 dialog.addEventListener('close', () => {
@@ -269,6 +329,10 @@ dialog.addEventListener('close', () => {
   state.maps = $('#maps').value;
   store.set('apiKey', state.apiKey);
   store.set('maps', state.maps);
+  const liters = parseFloat($('#liters').value.replace(',', '.'));
+  const consumption = parseFloat($('#consumption').value.replace(',', '.'));
+  if (liters > 0) { state.liters = liters; store.set('liters', liters); }
+  if (consumption > 0) { state.consumption = consumption; store.set('consumption', consumption); }
   if (state.position) search(); else render();
 });
 

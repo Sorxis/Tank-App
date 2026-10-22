@@ -26,6 +26,8 @@
     <button data-fuel="diesel" role="tab">Diesel</button>
   </nav>
 
+  <section id="forecast" class="forecast" aria-label="Prognose"></section>
+
   <section class="controls">
     <label>Umkreis
       <select id="radius">
@@ -40,6 +42,7 @@
       <select id="sort">
         <option value="price">Preis</option>
         <option value="dist">Entfernung</option>
+        <option value="net">Ersparnis inkl. Umweg</option>
       </select>
     </label>
     <label class="check"><input type="checkbox" id="only-open" checked> nur geöffnet</label>
@@ -64,6 +67,15 @@
         <input id="apikey" type="text" autocomplete="off" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
       </label>
       <p class="hint">Kostenlos beantragen unter <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a>. Ohne Schlüssel zeigt die App Demo-Daten.</p>
+      <fieldset>
+        <legend>Mein Auto</legend>
+        <label>Tankmenge pro Tankvorgang (Liter)
+          <input id="liters" type="number" inputmode="decimal" min="5" max="150" step="1">
+        </label>
+        <label>Verbrauch (Liter pro 100 km)
+          <input id="consumption" type="number" inputmode="decimal" min="2" max="30" step="0.1">
+        </label>
+      </fieldset>
       <label>Kartendienst für Navigation
         <select id="maps">
           <option value="apple">Apple Karten</option>
