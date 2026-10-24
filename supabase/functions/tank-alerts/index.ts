@@ -3,7 +3,9 @@
 //   POST {action:"sync", deviceId, subscription, apiKey, alerts:[{stationId, stationName, fuel, threshold}]}
 //        speichert Push-Abo und ersetzt die Alarme/Beobachtungen des Geräts
 //   POST {action:"delete", deviceId}            löscht Gerät und Alarme
-//   POST {action:"history", stationIds:[...]}   Preisverlauf der letzten 14 Tage
+//   POST {action:"forecast", lat, lng, rad, fuel, watch:[{id, lat, lng}]}
+//        merkt sich die Tankstellen in watch für den gemeinsamen Preisverlauf
+//        und liefert die gelernte Tageskurve für den Umkreis
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { checkCode, cors, json } from "../_shared/family.ts";
 
@@ -11,6 +13,8 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FUELS = new Set(["e5", "e10", "diesel"]);
+// Grob Deutschland, Tankerkönig kennt nur deutsche Tankstellen.
+const inGermany = (lat: number, lng: number) => lat > 47 && lat < 55.2 && lng > 5.5 && lng < 15.5;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -21,16 +25,23 @@ Deno.serve(async (req) => {
   const denied = await checkCode(body.code);
   if (denied) return denied;
 
-  if (body.action === "history") {
-    const ids = (Array.isArray(body.stationIds) ? body.stationIds : [])
-      .filter((id: unknown) => typeof id === "string" && UUID.test(id)).slice(0, 20);
-    if (!ids.length) return json({ prices: [] });
-    const since = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
-    const { data, error } = await db.from("tank_prices")
-      .select("station_id, ts, e5, e10, diesel")
-      .in("station_id", ids).gte("ts", since).order("ts").limit(20000);
+  if (body.action === "forecast") {
+    const lat = Number(body.lat), lng = Number(body.lng), rad = Number(body.rad);
+    if (!inGermany(lat, lng) || !(rad > 0 && rad <= 25) || !FUELS.has(body.fuel)) return json({ error: "forecast" }, 400);
+
+    const now = new Date().toISOString();
+    const watch = (Array.isArray(body.watch) ? body.watch : []).slice(0, 25)
+      .filter((w: any) => typeof w?.id === "string" && UUID.test(w.id) && inGermany(Number(w.lat), Number(w.lng)))
+      .map((w: any) => ({ station_id: w.id.toLowerCase(), lat: Number(w.lat), lng: Number(w.lng), last_seen: now }));
+    if (watch.length) await db.from("tank_stations").upsert(watch);
+
+    const { data, error } = await db.rpc("tank_forecast", { p_lat: lat, p_lng: lng, p_rad: rad, p_fuel: body.fuel });
     if (error) return json({ error: error.message }, 500);
-    return json({ prices: data });
+    return json({
+      hours: (data ?? []).map((r: any) => ({ dow: r.dow, hour: r.hour, delta: Number(r.delta), n: r.samples })),
+      stations: data?.[0]?.stations ?? 0,
+      days: data?.[0]?.days ?? 0,
+    });
   }
 
   if (typeof body.deviceId !== "string" || !UUID.test(body.deviceId)) return json({ error: "deviceId" }, 400);

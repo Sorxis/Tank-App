@@ -118,8 +118,8 @@ export async function syncIfSubscribed(ctx) {
   await sync(loadAlerts(), ctx);
 }
 
-export async function fetchServerHistory(stationIds) {
-  if (!backendReady || !stationIds.length) return [];
-  const data = await call({ action: 'history', stationIds: stationIds.slice(0, 20) });
-  return data.prices ?? [];
+// Meldet die Tankstellen für den gemeinsamen Preisverlauf und holt die
+// gelernte Tageskurve für den Umkreis.
+export async function fetchServerForecast({ lat, lng, rad, fuel, watch }) {
+  return call({ action: 'forecast', lat, lng, rad, fuel, watch: watch.slice(0, 25) });
 }

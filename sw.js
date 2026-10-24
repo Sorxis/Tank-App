@@ -1,5 +1,5 @@
 // Speichert die App-Dateien für schnellen Start. Preise kommen immer frisch aus dem Netz.
-const CACHE = 'tanken-v10';
+const CACHE = 'tanken-v11';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'forecast.js', 'alerts.js', 'config.js', 'manifest.json', 'icons/icon.svg', 'icons/icon-180.png', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css'];
 
 self.addEventListener('install', (e) => {
