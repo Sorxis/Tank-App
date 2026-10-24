@@ -1,7 +1,7 @@
 import { BACKEND_URL, BACKEND_KEY } from './config.js';
-import { forecast, recordPrices, setServerHistory } from './forecast.js';
+import { forecast, setServerForecast, serverForecastFuel } from './forecast.js';
 import {
-  getAlert, setAlert, removeAlert, syncIfSubscribed, fetchServerHistory, pushProblem, backendReady,
+  getAlert, setAlert, removeAlert, syncIfSubscribed, fetchServerForecast, pushProblem, backendReady,
 } from './alerts.js';
 
 const API = 'https://creativecommons.tankerkoenig.de/json/list.php';
@@ -24,6 +24,9 @@ const store = {
     try { localStorage.setItem('tanken.' + key, JSON.stringify(value)); } catch {}
   },
 };
+
+// Früher lernte jedes Gerät für sich, das übernimmt jetzt das Backend.
+try { localStorage.removeItem('tanken.history'); } catch {}
 
 const state = {
   fuel: store.get('fuel', 'e10'),
@@ -93,6 +96,8 @@ function netLabel(st) {
     : `<span class="net minus">${euro(-st.net)} teurer</span>`;
 }
 
+const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
 function renderForecast() {
   const f = forecast(state.fuel);
   const max = Math.max(...f.curve, 1);
@@ -112,8 +117,8 @@ function renderForecast() {
     sub = `Voraussichtlich rund ${ct} ct/l weniger, bei ${state.liters} l also etwa ${euro(ct / 100 * state.liters)}.`;
   }
   const src = f.source === 'eigen'
-    ? 'Prognose aus deinen gespeicherten Preisen in der Umgebung.'
-    : `Typischer Tagesverlauf in Deutschland (ADAC/Bundeskartellamt). Lernt mit jeder Suche dazu (${f.covered}/14 Stunden erfasst).`;
+    ? `Gelernt aus ${f.stations} ${f.stations === 1 ? 'Tankstelle' : 'Tankstellen'} im Umkreis an ${f.days} ${f.days === 1 ? 'Tag' : 'Tagen'}${f.weekday ? `, passend für ${WEEKDAYS[new Date().getDay()]}` : ''}. Gemeinsam für die ganze Familie.`
+    : `Typischer Tagesverlauf in Deutschland (ADAC/Bundeskartellamt). Die Familie sammelt gemeinsam Preise, nach etwa 2 Tagen lernt die Prognose daraus (${f.covered}/14 Stunden erfasst).`;
   $('#forecast').innerHTML = `${tip}<p class="sub">${sub}</p>
     <div class="bars" aria-hidden="true">${bars}</div>
     <div class="bar-axis"><span>0 Uhr</span><span>6</span><span>12</span><span>18</span></div>
@@ -377,9 +382,8 @@ async function search() {
     $('#status').textContent = 'Preise werden geladen …';
     state.stations = await fetchStations(state.position);
     state.loadedAt = new Date();
-    if (realPrices()) recordPrices(state.stations, state.favorites);
     render();
-    loadServerHistory();
+    loadServerForecast();
   } catch (err) {
     $('#status').textContent = err.message;
   } finally {
@@ -387,14 +391,20 @@ async function search() {
   }
 }
 
-// Verlauf vom Backend holen (Favoriten und nächste Tankstellen) und die
-// Prognose damit neu berechnen.
-async function loadServerHistory() {
-  if (!backendReady) return;
-  const nearest = [...state.stations].sort((a, b) => a.dist - b.dist).slice(0, 10).map((st) => st.id);
-  const ids = [...new Set([...state.favorites, ...nearest])];
+// Gemeinsame Prognose vom Backend holen. Dabei werden die nächsten
+// Tankstellen und Favoriten gemeldet, damit der Server ihre Preise sammelt.
+async function loadServerForecast() {
+  if (!backendReady || !state.familyCode || !state.position) return;
+  const nearest = [...state.stations].sort((a, b) => a.dist - b.dist).slice(0, 15);
+  const favs = state.stations.filter((st) => state.favorites.has(st.id));
+  const watch = [...new Map([...favs, ...nearest].map((st) => [st.id, { id: st.id, lat: st.lat, lng: st.lng }])).values()];
+  const fuel = state.fuel;
   try {
-    setServerHistory(await fetchServerHistory(ids));
+    const data = await fetchServerForecast({
+      lat: state.position.lat, lng: state.position.lng, rad: Number(state.radius), fuel, watch,
+    });
+    if (fuel !== state.fuel) return;
+    setServerForecast(fuel, data);
     renderForecast();
   } catch {}
 }
@@ -402,7 +412,10 @@ async function loadServerHistory() {
 // ---------- Bedienelemente ----------
 
 document.querySelectorAll('.fuel button').forEach((b) =>
-  b.addEventListener('click', () => { state.fuel = b.dataset.fuel; store.set('fuel', state.fuel); render(); }));
+  b.addEventListener('click', () => {
+    state.fuel = b.dataset.fuel; store.set('fuel', state.fuel); render();
+    if (serverForecastFuel() !== state.fuel) loadServerForecast();
+  }));
 
 $('#radius').value = state.radius;
 $('#radius').addEventListener('change', (e) => {
