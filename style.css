@@ -220,9 +220,13 @@ select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1p
 }
 .station:has(.price.cheapest) .badge:last-child { background: var(--cheap-soft); color: var(--cheap); }
 
-.net { font-weight: 700; }
-.net.plus { color: var(--cheap); }
-.net.minus { color: var(--pricey); }
+.net {
+  font: inherit; font-weight: 700; color: var(--muted); background: var(--card-2); border: 0;
+  border-radius: 99px; padding: 3px 10px; margin-left: 2px; cursor: pointer;
+}
+.net.plus { color: var(--cheap); background: var(--cheap-soft); }
+.net.minus { color: var(--pricey); background: var(--pricey-soft); }
+.leaflet-popup-content .net { font-size: 14px; margin: 4px 0 0; }
 
 .foot { color: var(--muted); font-size: 12px; text-align: center; margin-top: 28px; }
 
@@ -262,4 +266,14 @@ dialog .row { display: flex; gap: 10px; margin-top: 4px; }
 dialog .row button { flex: 1; min-height: 52px; border-radius: 16px; border: 0; background: var(--card-2); color: var(--text); font-size: 17px; font-weight: 700; }
 dialog .row button.primary { background: var(--accent); color: var(--accent-text); }
 dialog h2:focus { outline: none; }
+dialog .verdict { font: 800 20px/1.3 var(--round); margin: 0 0 6px; }
+dialog .verdict.plus { color: var(--cheap); }
+dialog .verdict.minus { color: var(--pricey); }
+dialog .verdict.neutral { font-size: 17px; font-weight: 600; margin-bottom: 12px; }
+dialog .calc { width: 100%; border-collapse: collapse; margin: 6px 0 16px; font-size: 15px; }
+dialog .calc th { text-align: left; font-weight: 500; color: var(--muted); padding: 7px 10px 7px 0; }
+dialog .calc td { text-align: right; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+dialog .calc tr + tr { border-top: 1px solid var(--line); }
+dialog .calc tr.total { border-top: 2px solid var(--text); }
+dialog .calc tr.total th { color: var(--text); font-weight: 800; }
 dialog .version { font-size: 12px; color: var(--muted); text-align: center; margin: 14px 0 0; }
