@@ -60,17 +60,21 @@ function navUrl(st) {
     : `https://maps.apple.com/?daddr=${dest}&dirflg=d`;
 }
 
-const euro = (v) => v.toFixed(2).replace('.', ',') + ' €';
+const euro = (v) => v.toFixed(2).replace('.', ',') + '\u00a0€';
 const ROAD_FACTOR = 1.3; // Straße ist im Schnitt etwa 30 % länger als Luftlinie
 
 // Umweg-Rechner: Ersparnis gegenüber der nächstgelegenen Tankstelle,
 // abzüglich Spritkosten für den Mehrweg hin und zurück.
+const WORTH_FROM = 1; // erst ab 1 € Ersparnis lohnt sich der Umweg
+
 function addNetSavings(list) {
   const ref = list.reduce((a, b) => (b.dist < a.dist ? b : a), list[0]);
   for (const st of list) {
     const extraKm = Math.max(0, st.dist - ref.dist) * 2 * ROAD_FACTOR;
     const detourCost = extraKm * state.consumption / 100 * st[state.fuel];
-    st.net = (ref[state.fuel] - st[state.fuel]) * state.liters - detourCost;
+    const advantage = (ref[state.fuel] - st[state.fuel]) * state.liters;
+    st.net = advantage - detourCost;
+    st.calc = { ref, extraKm, detourCost, advantage };
     st.isRef = st === ref;
   }
 }
@@ -88,12 +92,57 @@ function visibleStations() {
   return list;
 }
 
+// Kurzes Urteil zum Antippen; die Rechnung steht im Dialog.
 function netLabel(st) {
-  if (st.isRef) return '<span class="net">nächste Tankstelle</span>';
-  if (Math.abs(st.net) < 0.05) return '<span class="net">lohnt sich kaum</span>';
-  return st.net > 0
-    ? `<span class="net plus">spart ${euro(st.net)}</span>`
-    : `<span class="net minus">${euro(-st.net)} teurer</span>`;
+  if (st.isRef) return `<button type="button" class="net" data-net="${st.id}">nächste Tankstelle ⓘ</button>`;
+  return st.net >= WORTH_FROM
+    ? `<button type="button" class="net plus" data-net="${st.id}">✓ lohnt sich ⓘ</button>`
+    : `<button type="button" class="net minus" data-net="${st.id}">lohnt sich nicht ⓘ</button>`;
+}
+
+const km = (v) => v.toFixed(1).replace('.', ',') + '\u00a0km';
+const ct = (v) => (v * 100).toFixed(1).replace('.', ',') + ' ct';
+
+function openNetDialog(st) {
+  const { ref, extraKm, detourCost, advantage } = st.calc;
+  const fuel = FUEL_LABEL[state.fuel];
+  const diff = ref[state.fuel] - st[state.fuel];
+  let verdict;
+  let rows;
+  if (st.isRef) {
+    verdict = 'Das ist die nächste Tankstelle. Mit ihr werden alle anderen verglichen.';
+    rows = [];
+  } else {
+    if (st.net >= WORTH_FROM) verdict = `Ja. Du sparst insgesamt etwa ${euro(st.net)}.`;
+    else if (st.net > 0) verdict = `Nein. Du sparst nur etwa ${euro(st.net)}, das ist die Fahrt nicht wert.`;
+    else verdict = `Nein. Du zahlst insgesamt etwa ${euro(-st.net)} mehr als an der nächsten Tankstelle.`;
+    rows = [
+      ['Preis hier', `${st[state.fuel].toFixed(3).replace('.', ',')} €/l`],
+      ['Preis an der nächsten', `${ref[state.fuel].toFixed(3).replace('.', ',')} €/l`],
+      [diff >= 0 ? `${ct(diff)} günstiger × ${state.liters} l` : `${ct(-diff)} teurer × ${state.liters} l`,
+        (advantage >= 0 ? '+ ' : '− ') + euro(Math.abs(advantage))],
+      [`Umweg ca. ${km(extraKm)} (hin und zurück), ${String(state.consumption).replace('.', ',')} l/100 km`, '− ' + euro(detourCost)],
+      ['Ergebnis', (st.net >= 0 ? '+ ' : '− ') + euro(Math.abs(st.net))],
+    ];
+  }
+  const d = $('#net-dialog');
+  d.querySelector('.station-name').textContent = `${stationTitle(st)}, ${fuel}`;
+  d.querySelector('.verdict').textContent = verdict;
+  d.querySelector('.verdict').className = 'verdict ' + (st.isRef ? 'neutral' : st.net >= WORTH_FROM ? 'plus' : 'minus');
+  const ref2 = d.querySelector('.ref');
+  ref2.hidden = st.isRef;
+  ref2.textContent = `Verglichen mit der nächsten Tankstelle: ${stationTitle(ref)} (${km(ref.dist)} entfernt).`;
+  const table = d.querySelector('.calc');
+  table.hidden = !rows.length;
+  table.replaceChildren(...rows.map(([label, value], i) => {
+    const tr = document.createElement('tr');
+    if (i === rows.length - 1) tr.className = 'total';
+    const th = document.createElement('th'); th.textContent = label;
+    const td = document.createElement('td'); td.textContent = value;
+    tr.append(th, td);
+    return tr;
+  }));
+  d.showModal();
 }
 
 const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
@@ -197,6 +246,7 @@ function renderList(stations, min, max) {
     li.querySelector('.addr').textContent = stationAddress(st);
     li.querySelector('.fav').addEventListener('click', () => toggleFavorite(st.id));
     li.querySelector('.bell')?.addEventListener('click', () => openAlertDialog(st));
+    li.querySelector('.net').addEventListener('click', () => openNetDialog(st));
     list.append(li);
   }
 }
@@ -249,6 +299,7 @@ function renderMap(stations, min, max) {
     nav.target = '_blank';
     nav.rel = 'noopener';
     nav.textContent = 'Navigation starten';
+    info.querySelector('.net').addEventListener('click', () => openNetDialog(st));
     popup.append(title, addr, info, nav);
 
     L.marker([st.lat, st.lng], { icon, title: stationTitle(st) }).bindPopup(popup).addTo(markerLayer);
