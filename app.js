@@ -31,7 +31,8 @@ try { localStorage.removeItem('tanken.history'); } catch {}
 const state = {
   fuel: store.get('fuel', 'e10'),
   radius: store.get('radius', '5'),
-  sort: store.get('sort', 'price'),
+  // „Lohnt sich am meisten“ ist in der Preis-Sortierung aufgegangen.
+  sort: store.get('sort', 'price') === 'dist' ? 'dist' : 'price',
   onlyOpen: store.get('onlyOpen', true),
   apiKey: store.get('apiKey', ''),
   familyCode: store.get('familyCode', ''),
@@ -86,10 +87,16 @@ function visibleStations() {
   if (list.length) addNetSavings(list);
   list.sort((a, b) => {
     if (state.sort === 'dist') return a.dist - b.dist;
-    if (state.sort === 'net') return b.net - a.net || a.dist - b.dist;
-    return a[state.fuel] - b[state.fuel] || a.dist - b.dist;
+    return rank(b) - rank(a) || a[state.fuel] - b[state.fuel] || a.dist - b.dist;
   });
   return list;
+}
+
+// Preis inkl. Umweg: Tankstellen, die sich lohnen, nach Ersparnis zuerst,
+// dann die nächste, danach der Rest nach Ersparnis.
+function rank(st) {
+  if (st.net >= WORTH_FROM) return st.net;
+  return st.isRef ? 0 : st.net - 1000;
 }
 
 // Kurzes Urteil zum Antippen; die Rechnung steht im Dialog.
